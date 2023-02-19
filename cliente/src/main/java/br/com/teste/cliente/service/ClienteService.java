@@ -29,4 +29,8 @@ public class ClienteService {
     public void removerPorId(Long id) {
         clienteRepository.deleteById(id);
     }
+
+    public void deleteAll() {
+        clienteRepository.deleteAll();
+    }
 }

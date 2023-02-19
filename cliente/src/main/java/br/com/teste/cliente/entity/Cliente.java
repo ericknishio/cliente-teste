@@ -42,4 +42,10 @@ public class Cliente implements Serializable {
     @OneToMany(mappedBy = "cliente")
     private List<Endereco> enderecos;
 
+    public Cliente(String nome, String email, String cpf, Calendar dataNascimento) {
+        this.nome = nome;
+        this.email = email;
+        this.cpf = cpf;
+        this.dataNascimento = dataNascimento;
+    }
 }
