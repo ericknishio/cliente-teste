@@ -33,4 +33,8 @@ public class EnderecoService {
     public void removerPorId(Long id) {
         enderecoRepository.deleteById(id);
     }
+
+    public void deleteAll() {
+        enderecoRepository.deleteAll();
+    }
 }

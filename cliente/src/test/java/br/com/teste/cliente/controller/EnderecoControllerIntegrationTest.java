@@ -2,7 +2,9 @@ package br.com.teste.cliente.controller;
 
 import br.com.teste.cliente.ClienteApplication;
 import br.com.teste.cliente.entity.Cliente;
+import br.com.teste.cliente.entity.Endereco;
 import br.com.teste.cliente.service.ClienteService;
+import br.com.teste.cliente.service.EnderecoService;
 import br.com.teste.cliente.util.Util;
 import org.junit.Assert;
 import org.junit.Test;
@@ -37,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(
         locations = "classpath:application-integrationtest.properties")
 @ActiveProfiles("test")
-public class ClienteControllerIntegrationTest {
+public class EnderecoControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -45,6 +47,8 @@ public class ClienteControllerIntegrationTest {
     private WebApplicationContext webApplicationContext;
     @Autowired
     private ClienteService clienteService;
+    @Autowired
+    private EnderecoService enderecoService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -55,92 +59,87 @@ public class ClienteControllerIntegrationTest {
 
     @AfterEach
     public void afterEach() {
-        System.out.println("After Each cleanUpEach() method called");
+        enderecoService.deleteAll();
         clienteService.deleteAll();
     }
 
     @AfterAll
     public void afterAll() {
-        System.out.println("After All cleanUp() method called");
+        jdbcTemplate.execute("TRUNCATE TABLE endereco");
+        jdbcTemplate.execute("ALTER SEQUENCE endereco_id_seq RESTART");
         jdbcTemplate.execute("TRUNCATE TABLE cliente");
         jdbcTemplate.execute("ALTER SEQUENCE cliente_id_seq RESTART");
     }
 
     @Test
-    public void givenCliente_whenPostCliente_thenStatus201() throws Exception {
-        Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), false);
-        String clienteParaEnvio = Util.objectToJson(cliente);
+    public void givenEndereco_whenPostEndereco_thenStatus201() throws Exception {
+        Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
+        Endereco endereco = createEndereco("Rua Ana Faco", "265", "60335430", "Fortaleza", true, cliente, false);
+        String enderecoParaEnvio = Util.objectToJson(endereco);
 
-        mockMvc.perform(post("/cliente")
+        mockMvc.perform(post("/endereco")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(clienteParaEnvio))
+                        .content(enderecoParaEnvio))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(MockMvcResultHandlers.print())
-                .andExpect(jsonPath("$.nome").value("Nome 1"));
+                .andExpect(jsonPath("$.logradouro").value(endereco.getLogradouro()));
     }
 
     @Test
-    public void givenCliente_whenPutCliente_thenStatus204() throws Exception {
+    public void givenEndereco_whenPutEndereco_thenStatus204() throws Exception {
         Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
-        cliente.setNome("Nome 1 alterado");
-        String clienteParaEnvio = Util.objectToJson(cliente);
+        Endereco endereco = createEndereco("Rua Ana Faco", "265", "60335430", "Fortaleza", true, cliente, true);
+        endereco.setPrincipal(false);
+        String enderecoParaEnvio = Util.objectToJson(endereco);
 
-        mockMvc.perform(put("/cliente/{id}", cliente.getId())
+        mockMvc.perform(put("/endereco/{id}", endereco.getId())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(clienteParaEnvio))
+                        .content(enderecoParaEnvio))
                 .andExpect(status().isNoContent());
     }
 
     @Test
-    public void givenCliente_whenPutCliente_thenStatus404() throws Exception {
+    public void givenEndereco_whenPutEndereco_thenStatus404() throws Exception {
         Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
-        cliente.setNome("Nome 1 alterado");
-        String clienteParaEnvio = Util.objectToJson(cliente);
+        Endereco endereco = createEndereco("Rua Ana Faco", "265", "60335430", "Fortaleza", true, cliente, true);
+        endereco.setPrincipal(false);
+        String enderecoParaEnvio = Util.objectToJson(endereco);
 
-        mockMvc.perform(put("/cliente/{id}", cliente.getId() + 1)
+        mockMvc.perform(put("/endereco/{id}", endereco.getId() + 1)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(clienteParaEnvio))
+                        .content(enderecoParaEnvio))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    public void givenCliente_whenGetClienteById_thenStatus200() throws Exception {
+    public void givenEnderecos_whenGetEnderecosByCliente_thenStatus200() throws Exception {
         Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
+        createEndereco("Rua Ana Faco", "265", "60335430", "Fortaleza", true, cliente, true);
+        createEndereco("Rua Parnaíba", "473", "40436-790", "Salvador", true, cliente, true);
+        createEndereco("Rua Sena Madureira", "764", "76914840", "Ji-Paraná", true, cliente, true);
 
-        mockMvc.perform(get("/cliente/{id}", cliente.getId())
+        MvcResult mvcResult = mockMvc.perform(get("/endereco/{id}", cliente.getId())
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(MockMvcResultHandlers.print())
-                .andExpect(jsonPath("$.nome").value("Nome 1"));
-    }
-
-    @Test
-    public void givenCliente_whenGetClienteById_thenStatus404() throws Exception {
-        Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
-
-        mockMvc.perform(get("/cliente/{id}", cliente.getId() + 1)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    public void givenClientes_whenGetClientes_thenStatus200() throws Exception {
-        createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
-        createCliente("Nome 2", "email@teste.com", "84837746314", Calendar.getInstance(), true);
-        createCliente("Nome 3", "email@teste.com", "87999603546", Calendar.getInstance(), true);
-
-        mockMvc.perform(get("/cliente")
-                .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk()).andReturn();
 
-        MvcResult mvcResult = mockMvc.perform(get("/cliente")
+        Endereco[] enderecos = Util.jsonToObject(mvcResult.getResponse().getContentAsString(), Endereco[].class);
+        Assert.assertTrue(enderecos.length > 0);
+    }
+
+    @Test
+    public void givenEnderecos_whenGetEnderecosByCliente_thenStatus200_size0() throws Exception {
+        Cliente cliente = createCliente("Nome 1", "email@teste.com", "55794825820", Calendar.getInstance(), true);
+        createEndereco("Rua Ana Faco", "265", "60335430", "Fortaleza", true, cliente, true);
+        createEndereco("Rua Parnaíba", "473", "40436-790", "Salvador", true, cliente, true);
+        createEndereco("Rua Sena Madureira", "764", "76914840", "Ji-Paraná", true, cliente, true);
+
+        MvcResult mvcResult = mockMvc.perform(get("/endereco/{id}", cliente.getId() + 1)
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
-        Cliente[] clientes = Util.jsonToObject(mvcResult.getResponse().getContentAsString(), Cliente[].class);
-        Assert.assertTrue(clientes.length > 0);
+                .andExpect(status().isOk()).andReturn();
+
+        Endereco[] enderecos = Util.jsonToObject(mvcResult.getResponse().getContentAsString(), Endereco[].class);
+        Assert.assertTrue(enderecos.length == 0);
     }
 
     private Cliente createCliente(String nome, String email, String cpf, Calendar dataNascimento, boolean persist) {
@@ -149,6 +148,15 @@ public class ClienteControllerIntegrationTest {
             return clienteService.salvar(cliente);
         } else {
             return cliente;
+        }
+    }
+
+    private Endereco createEndereco(String logradouro, String numero, String cep, String cidade, boolean principal, Cliente cliente, boolean persist) {
+        Endereco endereco = new Endereco(logradouro, numero, cep, cidade, principal, cliente);
+        if (persist) {
+            return enderecoService.salvar(endereco);
+        } else {
+            return endereco;
         }
     }
 

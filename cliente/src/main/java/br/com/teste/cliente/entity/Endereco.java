@@ -41,4 +41,12 @@ public class Endereco implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     private Cliente cliente;
 
+    public Endereco(String logradouro, String numero, String cep, String cidade, Boolean principal, Cliente cliente) {
+        this.logradouro = logradouro;
+        this.numero = numero;
+        this.cep = cep;
+        this.cidade = cidade;
+        this.principal = principal;
+        this.cliente = cliente;
+    }
 }
